@@ -22,7 +22,11 @@ func main() {
 
 func sendAndReceive(messageStr string) (string, error) {
 	// send message via UDP
-	addr, err := net.ResolveUDPAddr("udp", "127.0.0.1:8080")
+	serverAddr := os.Getenv("UDP_SERVER")
+	if serverAddr == "" {
+		serverAddr = "127.0.0.1:8080"
+	}
+	addr, err := net.ResolveUDPAddr("udp", serverAddr)
 	if err != nil {
 		return "", err
 	}
@@ -31,18 +35,18 @@ func sendAndReceive(messageStr string) (string, error) {
 		return "", err
 	}
 	defer conn.Close()
-	message := []byte(fmt.Sprintf("%v\n", messageStr))
+	message := []byte(messageStr + "\n")
 	_, err = conn.Write(message)
 	if err != nil {
 		return "", err
 	}
 
 	// wait up to 2ms for a reply
-	conn.SetReadDeadline(time.Now().Add(2 * time.Millisecond))
-	buffer := make([]byte, 8)
-	_, _, err = conn.ReadFromUDP(buffer)
+	conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+	buffer := make([]byte, 1024)
+	n, _, err := conn.ReadFromUDP(buffer)
 	if err != nil {
 		return "", err
 	}
-	return string(buffer), err
+	return string(buffer[:n]), nil
 }
